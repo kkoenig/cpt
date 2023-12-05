@@ -23,7 +23,8 @@ int main() {
       ankerl::nanobench::doNotOptimizeAway(result);
     });
     bench.run("read_u32", [&] {
-      const uint32_t result = cpt_read_u32(input_string);
+      auto c = cpt_cursor_ref_string(input_string);
+      const uint32_t result = cpt_read_u32(&c);
       ankerl::nanobench::doNotOptimizeAway(result);
     });
     bench.run("null", [&] { ankerl::nanobench::doNotOptimizeAway(0); });
@@ -31,9 +32,9 @@ int main() {
   {
     ankerl::nanobench::Bench bench;
     bench.run("cpt_slurp_path", [&] {
-      const auto *result =
-          cpt_slurp_path("./testdata/random_unsigned_integers_small", NULL);
-      ankerl::nanobench::doNotOptimizeAway(result);
+      const auto buffer =
+          cpt_slurp_path("./testdata/random_unsigned_integers_small");
+      ankerl::nanobench::doNotOptimizeAway(buffer);
     });
   }
 }
