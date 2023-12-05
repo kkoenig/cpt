@@ -12,6 +12,19 @@
 #include <sys/stat.h>
 #endif
 
+#define CPT_MAX(a, b)                                                          \
+  ({                                                                           \
+    __typeof__(a) _a = (a);                                                    \
+    __typeof__(b) _b = (b);                                                    \
+    _a > _b ? _a : _b;                                                         \
+  })
+#define CPT_MIN(a, b)                                                          \
+  ({                                                                           \
+    __typeof__(a) _a = (a);                                                    \
+    __typeof__(b) _b = (b);                                                    \
+    _a <= _b ? _a : _b;                                                        \
+  })
+
 typedef struct {
   const char *data;
   size_t size;
@@ -61,6 +74,23 @@ uint32_t cpt_read_u32(cpt_cursor *c) {
   }
   c->pos = s - c->buffer.data;
   return result;
+}
+uint64_t cpt_read_u64(cpt_cursor *c) {
+  uint64_t result = 0;
+  const char *s = c->pos + c->buffer.data;
+  while (*s >= '0' && *s <= '9') {
+    result = result * 10 + *s - '0';
+    ++s;
+  }
+  c->pos = s - c->buffer.data;
+  return result;
+}
+
+uint64_t cpt_next_u64(cpt_cursor *c) {
+  while (c->buffer.data[c->pos] == ' ' || c->buffer.data[c->pos] == '\n') {
+    c->pos++;
+  }
+  return cpt_read_u64(c);
 }
 
 uint32_t cpt_next_u32(cpt_cursor *c) {
@@ -141,7 +171,7 @@ cpt_buffer cpt_slurp_fp(FILE *fp) {
 }
 
 cpt_buffer2d cpt_slurp2d_buffer(cpt_buffer buffer) {
-  size_t min_column_size = (size_t)-1;
+  size_t min_column_size = SIZE_MAX;
   size_t max_column_size = 0;
   size_t column_size = 0;
   size_t current_row = 0;
@@ -155,12 +185,8 @@ cpt_buffer2d cpt_slurp2d_buffer(cpt_buffer buffer) {
   current_row = 0;
   for (size_t i = 0; i < buffer.size; ++i) {
     if (buffer.data[i] == '\n') {
-      if (column_size > max_column_size) {
-        max_column_size = column_size;
-      }
-      if (column_size < min_column_size) {
-        min_column_size = column_size;
-      }
+      max_column_size = CPT_MAX(column_size, max_column_size);
+      min_column_size = CPT_MIN(column_size, min_column_size);
       rows[current_row++] = (cpt_buffer){
           .data = buffer.data + i - column_size,
           .size = column_size,
