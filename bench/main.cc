@@ -23,7 +23,7 @@ int main() {
       ankerl::nanobench::doNotOptimizeAway(result);
     });
     bench.run("read_u32", [&] {
-      auto c = cpt_cursor_ref_string(input_string);
+      auto c = cpt_cursor_ref_cstring(input_string);
       const uint32_t result = cpt_read_u32(&c);
       ankerl::nanobench::doNotOptimizeAway(result);
     });
