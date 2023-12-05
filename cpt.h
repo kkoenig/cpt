@@ -29,7 +29,7 @@ typedef struct {
   const char *data;
   size_t size;
 } cpt_buffer;
-// todo free
+void cpt_buffer_free(cpt_buffer *buffer);
 
 typedef struct {
   const cpt_buffer buffer;
@@ -45,19 +45,28 @@ cpt_buffer cpt_slurp_stdin();
 cpt_buffer cpt_slurp_path(const char *path);
 cpt_buffer cpt_slurp_fp(FILE *fp);
 
+char cpt_cursor_peek(const cpt_cursor *c);
+void cpt_cursor_read_until(cpt_cursor *c, const char ch);
+void cpt_cursor_skip(cpt_cursor *c, const size_t n);
+
 typedef struct {
-  const cpt_buffer store;
+  cpt_buffer store;
   cpt_buffer *rows;
   size_t num_rows;
   size_t max_column_width;
   size_t min_column_width;
 } cpt_buffer2d;
+void cpt_buffer2d_free(cpt_buffer2d *buffer);
+
+cpt_buffer2d cpt_slurp2d_stdin();
 cpt_buffer2d cpt_slurp2d_buffer(cpt_buffer buffer);
 
-// Read a 32-bit positive integer from a given stream
+// Read an n-bit positive integer and update the cursor
 uint32_t cpt_read_u32(cpt_cursor *c);
-// Read the next 32-bit positive integer from a given stream, skipping spaces
+uint64_t cpt_read_u64(cpt_cursor *c);
+// Read the next n-bit positive integer and update the cursor, skipping spaces
 uint32_t cpt_next_u32(cpt_cursor *c);
+uint64_t cpt_next_u64(cpt_cursor *c);
 // Read a 32-bit integer from a given stream
 int32_t cpt_read_i32(cpt_cursor *c);
 // Read the next 32-bit integer from a given stream, skipping spaces
@@ -122,7 +131,17 @@ int32_t cpt_next_i32(cpt_cursor *c) {
   return cpt_read_i32(c);
 }
 
-bool cpt_cursor_eof(const cpt_cursor c) { return c.pos == c.buffer.size; }
+bool cpt_cursor_eof(const cpt_cursor c) { return c.pos >= c.buffer.size; }
+
+char cpt_cursor_peek(const cpt_cursor *c) { return c->buffer.data[c->pos]; }
+
+void cpt_cursor_read_until(cpt_cursor *c, const char ch) {
+  while (!cpt_cursor_eof(*c) && c->buffer.data[c->pos] != ch) {
+    ++c->pos;
+  }
+}
+
+void cpt_cursor_skip(cpt_cursor *c, const size_t n) { c->pos += n; }
 
 cpt_cursor cpt_cursor_ref_cstring(const char *s) {
   return (cpt_cursor){.buffer = (cpt_buffer){.data = s, .size = strlen(s)},
@@ -170,6 +189,17 @@ cpt_buffer cpt_slurp_fp(FILE *fp) {
   };
 }
 
+void cpt_buffer_free(cpt_buffer *buffer) {
+  free((void *)buffer->data);
+  buffer->size = 0;
+}
+
+void cpt_buffer2d_free(cpt_buffer2d *buffer) {
+  free(buffer->rows);
+  buffer->rows = NULL;
+  cpt_buffer_free(&buffer->store);
+}
+
 cpt_buffer2d cpt_slurp2d_buffer(cpt_buffer buffer) {
   size_t min_column_size = SIZE_MAX;
   size_t max_column_size = 0;
@@ -204,4 +234,8 @@ cpt_buffer2d cpt_slurp2d_buffer(cpt_buffer buffer) {
       .max_column_width = max_column_size,
       .min_column_width = min_column_size,
   };
+}
+
+cpt_buffer2d cpt_slurp2d_stdin() {
+  return cpt_slurp2d_buffer(cpt_slurp_stdin());
 }
