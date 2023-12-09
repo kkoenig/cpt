@@ -124,11 +124,33 @@ int32_t cpt_read_i32(cpt_cursor *c) {
   return -result;
 }
 
+int32_t cpt_read_i64(cpt_cursor *c) {
+  const char *s = c->pos + c->buffer.data;
+  if (*s != '-') {
+    return cpt_read_u64(c);
+  }
+  ++s;
+  int32_t result = 0;
+  while (*s >= '0' && *s <= '9') {
+    result = result * 10 + *s - '0';
+    ++s;
+  }
+  c->pos = s - c->buffer.data;
+  return -result;
+}
+
 int32_t cpt_next_i32(cpt_cursor *c) {
   while (c->buffer.data[c->pos] == ' ' || c->buffer.data[c->pos] == '\n') {
     c->pos++;
   }
   return cpt_read_i32(c);
+}
+
+int32_t cpt_next_i64(cpt_cursor *c) {
+  while (c->buffer.data[c->pos] == ' ' || c->buffer.data[c->pos] == '\n') {
+    c->pos++;
+  }
+  return cpt_read_i64(c);
 }
 
 bool cpt_cursor_eof(const cpt_cursor c) { return c.pos >= c.buffer.size; }
